@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import psycopg
-from psycopg.rows import dict_row
+from psycopg.rows import DictRow, dict_row
+from psycopg.types.json import Json
 
 from libs.llm import embed
 from libs.retrieval.chunking import Chunk
@@ -35,7 +36,7 @@ class PgVectorStore:
         self.collection = collection
         self.dsn = dsn or get_settings().database_url
 
-    def _conn(self) -> psycopg.Connection:
+    def _conn(self) -> psycopg.Connection[DictRow]:
         return psycopg.connect(self.dsn, row_factory=dict_row)
 
     # ---- ingestion -------------------------------------------------------
@@ -64,7 +65,7 @@ class PgVectorStore:
                     content_hash,
                     doc_type,
                     title,
-                    psycopg.types.json.Json(metadata or {}),
+                    Json(metadata or {}),
                 ),
             )
             row = cur.fetchone()
@@ -101,7 +102,7 @@ class PgVectorStore:
                         chunk.content,
                         chunk.token_count,
                         str(vector),
-                        psycopg.types.json.Json(chunk.metadata),
+                        Json(chunk.metadata),
                     ),
                 )
         return len(chunks)

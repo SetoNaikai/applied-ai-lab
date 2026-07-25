@@ -8,7 +8,7 @@ after the fact.
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any, TypeVar
 
@@ -34,7 +34,7 @@ def _client() -> Any | None:
 
 
 @contextmanager
-def trace(name: str, **metadata: Any):
+def trace(name: str, **metadata: Any) -> Iterator[Any]:
     """Context manager for a named span."""
     client = _client()
     if client is None:
