@@ -59,7 +59,13 @@ class PgVectorStore:
                 ON CONFLICT (content_hash) DO NOTHING
                 RETURNING id
                 """,
-                (source_uri, content_hash, doc_type, title, psycopg.types.json.Json(metadata or {})),
+                (
+                    source_uri,
+                    content_hash,
+                    doc_type,
+                    title,
+                    psycopg.types.json.Json(metadata or {}),
+                ),
             )
             row = cur.fetchone()
             return row["id"] if row else None

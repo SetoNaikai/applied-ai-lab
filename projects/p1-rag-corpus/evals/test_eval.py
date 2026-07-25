@@ -29,7 +29,7 @@ THRESHOLDS = {
 @pytest.fixture
 def dataset() -> GoldenDataset:
     if not DATASET.exists():
-        pytest.skip("golden dataset not yet built -- built in P2, see projects/p2-eval-harness/README.md")
+        pytest.skip("golden dataset not yet built in P2 -- see projects/p2-eval-harness/README.md")
     return GoldenDataset.load(DATASET)
 
 
