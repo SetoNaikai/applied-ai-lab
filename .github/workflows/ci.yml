@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule:
+    - cron: "0 6 * * *"   # nightly full eval suite
+
+jobs:
+  quality:
+    name: Lint, typecheck, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,evals]"
+      - name: Ruff
+        run: ruff check . && ruff format --check .
+      - name: Mypy
+        run: mypy libs
+      - name: Unit tests (no network, no paid APIs)
+        run: pytest -v -m "not slow and not costs_money and not eval"
+
+  evals:
+    name: Eval regression gate
+    runs-on: ubuntu-latest
+    # Only on PRs and the nightly schedule -- these calls cost money.
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: lab
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lab
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DATABASE_URL: postgresql://lab:postgres@localhost:5432/lab
+      MAX_COST_PER_EVAL_SUITE: "5.00"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -e ".[dev,evals,retrieval]"
+      - name: Apply schema
+        run: |
+          sudo apt-get install -y postgresql-client
+          psql "$DATABASE_URL" -f sql/init/01-schema.sql
+      # Fast subset on PRs, full suite nightly.
+      # NOTE: this gate is here to fail. Do not loosen a threshold to make a
+      # build green -- fix the regression, or document in an ADR why the
+      # threshold was wrong in the first place.
+      - name: Eval subset (PR)
+        if: github.event_name == 'pull_request'
+        run: pytest -v -m "eval and not slow"
+      - name: Full eval suite (nightly)
+        if: github.event_name == 'schedule'
+        run: pytest -v -m eval

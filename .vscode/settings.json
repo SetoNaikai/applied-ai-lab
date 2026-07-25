@@ -1,0 +1,21 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests", "projects"],
+  "python.analysis.typeCheckingMode": "standard",
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": { "source.fixAll.ruff": "explicit", "source.organizeImports.ruff": "explicit" }
+  },
+  "[markdown]": { "editor.wordWrap": "on", "editor.quickSuggestions": { "comments": "off", "strings": "off", "other": "off" } },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/.mypy_cache": true
+  },
+  "search.exclude": { "**/data": true, "**/models": true, "**/mlruns": true },
+  "files.associations": { "CLAUDE.md": "markdown", "*.jsonl": "jsonl" }
+}
