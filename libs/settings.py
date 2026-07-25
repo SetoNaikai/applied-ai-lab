@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     google_api_key: str | None = None
 
     # Local inference
+    # If local_llm_base_url is set, local model calls route through an
+    # OpenAI-compatible gateway (LiteLLM, vLLM, Ollama's /v1) instead of the
+    # native Ollama API -- use role aliases as model names in that case.
+    local_llm_base_url: str | None = None
+    local_llm_api_key: str = "sk-dummy-key"
     ollama_base_url: str = "http://localhost:11434"
     local_model: str = "llama3.1:8b"
     local_multilingual_model: str = "qwen2.5:7b"

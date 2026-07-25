@@ -26,10 +26,12 @@ async def check_local() -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-async def check_frontier() -> tuple[bool, str]:
+async def check_frontier() -> tuple[bool | None, str]:
+    """Optional. No key configured means SKIP, not FAIL -- the lab is
+    deliberately runnable local-only; frontier access is opt-in per project."""
     settings = get_settings()
     if not settings.anthropic_api_key:
-        return False, "ANTHROPIC_API_KEY not set in .env"
+        return None, "no ANTHROPIC_API_KEY -- running local-only (fine)"
     try:
         budget = Budget(limit_usd=0.10)
         out = await LLM(budget=budget).complete(PROMPT)
@@ -79,17 +81,18 @@ async def main() -> int:
     table.add_column("Status")
     table.add_column("Detail", overflow="fold")
 
-    results = [
-        ("Local inference (Ollama)", local),
-        ("Frontier inference (Anthropic)", frontier),
+    results: list[tuple[str, tuple[bool | None, str]]] = [
+        ("Local inference (Ollama/gateway)", local),
+        ("Frontier inference (optional)", frontier),
         ("Embeddings", embeddings),
         ("Postgres / pgvector", postgres),
     ]
     for name, (ok, detail) in results:
-        table.add_row(name, "[green]PASS[/]" if ok else "[red]FAIL[/]", detail)
+        status = "[yellow]SKIP[/]" if ok is None else ("[green]PASS[/]" if ok else "[red]FAIL[/]")
+        table.add_row(name, status, detail)
 
     console.print(table)
-    failed = [name for name, (ok, _) in results if not ok]
+    failed = [name for name, (ok, _) in results if ok is False]
     if failed:
         console.print(f"\n[red]{len(failed)} check(s) failed:[/] {', '.join(failed)}")
         console.print("Try: [bold]make up[/] then [bold]make models[/], and check .env")

@@ -129,7 +129,10 @@ class LLM:
         started = time.perf_counter()
 
         if self.is_local:
-            result = await self._ollama(messages, system)
+            if self.settings.local_llm_base_url:
+                result = await self._openai_compatible(messages, system)
+            else:
+                result = await self._ollama(messages, system)
         elif self.model.startswith("claude-"):
             result = await self._anthropic(messages, system)
         elif self.model.startswith("gpt-"):
@@ -186,6 +189,39 @@ class LLM:
             output_tokens=usage.completion_tokens if usage else 0,
         )
 
+    async def _openai_compatible(self, messages: list[Message], system: str | None) -> Completion:
+        """Local gateway route (LiteLLM / vLLM / Ollama's /v1).
+
+        Model names here are gateway aliases (e.g. role aliases on a LiteLLM
+        switchboard), deliberately not concrete tags -- the model behind an
+        alias is swappable without touching this repo.
+        """
+        payload = [m.model_dump() for m in messages]
+        if system:
+            payload.insert(0, {"role": "system", "content": system})
+        base = str(self.settings.local_llm_base_url).rstrip("/")
+        async with httpx.AsyncClient(timeout=300) as client:
+            resp = await client.post(
+                f"{base}/chat/completions",
+                headers={"Authorization": f"Bearer {self.settings.local_llm_api_key}"},
+                json={
+                    "model": self.model,
+                    "messages": payload,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        usage = data.get("usage") or {}
+        return Completion(
+            text=data["choices"][0]["message"]["content"] or "",
+            model=self.model,
+            input_tokens=usage.get("prompt_tokens", 0),
+            output_tokens=usage.get("completion_tokens", 0),
+            raw=data,
+        )
+
     async def _ollama(self, messages: list[Message], system: str | None) -> Completion:
         payload = [m.model_dump() for m in messages]
         if system:
@@ -212,9 +248,23 @@ class LLM:
 
 
 async def embed(texts: list[str], model: str | None = None) -> list[list[float]]:
-    """Embeddings via Ollama. Dimension must match the vector(n) column."""
+    """Embeddings via the local gateway (if configured) or native Ollama.
+
+    Dimension must match the vector(n) column.
+    """
     settings = get_settings()
     model = model or settings.embedding_model
+    if settings.local_llm_base_url:
+        base = str(settings.local_llm_base_url).rstrip("/")
+        async with httpx.AsyncClient(timeout=300) as client:
+            resp = await client.post(
+                f"{base}/embeddings",
+                headers={"Authorization": f"Bearer {settings.local_llm_api_key}"},
+                json={"model": model, "input": texts},
+            )
+            resp.raise_for_status()
+            data = resp.json()["data"]
+        return [item["embedding"] for item in data]
     out: list[list[float]] = []
     async with httpx.AsyncClient(timeout=300) as client:
         for text in texts:

@@ -3,8 +3,7 @@ name: CI
 on:
   push: { branches: [main] }
   pull_request:
-  schedule:
-    - cron: "0 6 * * *"   # nightly full eval suite
+  workflow_dispatch:   # manual: the paid eval job below only ever runs this way
 
 jobs:
   quality:
@@ -26,10 +25,14 @@ jobs:
         run: pytest -v -m "not slow and not costs_money and not eval"
 
   evals:
-    name: Eval regression gate
+    name: Eval regression gate (manual, optional)
     runs-on: ubuntu-latest
-    # Only on PRs and the nightly schedule -- these calls cost money.
-    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    # LOCAL-FIRST: the real eval gate runs on the lab machine against the
+    # local gateway (`make eval`), where inference is free. This cloud job is
+    # OPT-IN (manual trigger only) and requires a paid ANTHROPIC_API_KEY repo
+    # secret -- it exists for the day frontier-vs-local comparison runs are
+    # wanted in CI, and is never part of the push/PR path.
+    if: github.event_name == 'workflow_dispatch'
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -54,13 +57,8 @@ jobs:
         run: |
           sudo apt-get install -y postgresql-client
           psql "$DATABASE_URL" -f sql/init/01-schema.sql
-      # Fast subset on PRs, full suite nightly.
       # NOTE: this gate is here to fail. Do not loosen a threshold to make a
       # build green -- fix the regression, or document in an ADR why the
       # threshold was wrong in the first place.
-      - name: Eval subset (PR)
-        if: github.event_name == 'pull_request'
-        run: pytest -v -m "eval and not slow"
-      - name: Full eval suite (nightly)
-        if: github.event_name == 'schedule'
+      - name: Full eval suite
         run: pytest -v -m eval
