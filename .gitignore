@@ -23,3 +23,6 @@ mlruns/
 outputs/
 .DS_Store
 .ipynb_checkpoints/
+
+# Machine-specific: disables services when a local lab already provides them
+docker-compose.override.yml
