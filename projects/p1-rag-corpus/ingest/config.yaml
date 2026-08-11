@@ -1,0 +1,5 @@
+source_paths:
+  - data/corpus/*.txt
+chunk_size: 512
+chunk_overlap: 64
+max_concurrent_tasks: 4
