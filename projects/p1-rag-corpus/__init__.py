@@ -1,4 +1,5 @@
 """P1 RAG Corpus project."""
+
 from __future__ import annotations
 
 from ingest.ingest import ingest_files

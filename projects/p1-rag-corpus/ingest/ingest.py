@@ -40,9 +40,9 @@ async def _process_file(
 
         # Read content
         text = path.read_text(encoding="utf-8")  # noqa: ASYNC240
-        
+
         # Chunk (placeholder - real chunking in libs/retrieval)
-        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size - chunk_overlap)]
+        chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size - chunk_overlap)]
 
         logger.info(f"Processed {path.as_posix()}: {len(chunks)} chunks")
         return path.as_posix(), None
@@ -95,7 +95,7 @@ async def ingest_files(
             text = path.read_text(encoding="utf-8")  # noqa: ASYNC240
             total_chunks += len(
                 [
-                    text[i:i+config.chunk_size]
+                    text[i : i + config.chunk_size]
                     for i in range(0, len(text), config.chunk_size - config.chunk_overlap)
                 ]
             )
