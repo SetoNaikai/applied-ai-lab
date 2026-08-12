@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from pathlib import Path
-from typing import List, Optional
 
-from .models import IngestConfig, IngestResult, IngestFailure
+from .models import IngestConfig, IngestFailure, IngestResult
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +28,21 @@ async def _process_file(
     file_path: str,
     chunk_size: int,
     chunk_overlap: int,
-) -> tuple[str, Optional[str]]:
+) -> tuple[str, str | None]:
     """Process a single file and return (file_path, error_message | None)."""
     try:
-        path = Path(file_path)
-        if not path.exists():
+        path = Path(file_path)  # noqa: ASYNC240
+        if not path.exists():  # noqa: ASYNC240
             raise FileNotFoundError(f"File not found: {path.as_posix()}")
 
         if path.suffix not in (".txt", ".md"):
             raise ValueError(f"Unsupported file type: {path.suffix}")
 
         # Read content
-        text = path.read_text(encoding="utf-8")
-        
+        text = path.read_text(encoding="utf-8")  # noqa: ASYNC240
+
         # Chunk (placeholder - real chunking in libs/retrieval)
-        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size - chunk_overlap)]
+        chunks = [text[i : i + chunk_size] for i in range(0, len(text), chunk_size - chunk_overlap)]
 
         logger.info(f"Processed {path.as_posix()}: {len(chunks)} chunks")
         return path.as_posix(), None
@@ -61,8 +59,7 @@ async def ingest_files(
     """Ingest files with concurrent processing and failure logging."""
     _ensure_failure_log_dir(log_dir)
 
-    # Expand glob patterns
-    source_files: List[str] = []
+    source_files: list[str] = []
     for pattern in config.source_paths:
         pattern_path = Path(pattern)
         matches = list(pattern_path.parent.glob(pattern_path.name))
@@ -76,7 +73,7 @@ async def ingest_files(
     # Process concurrently
     semaphore = asyncio.Semaphore(config.max_concurrent_tasks)
 
-    async def _limited_process(file_path: str) -> tuple[str, Optional[str]]:
+    async def _limited_process(file_path: str) -> tuple[str, str | None]:
         async with semaphore:
             return await _process_file(
                 file_path,
@@ -89,14 +86,19 @@ async def ingest_files(
 
     # Aggregate results
     total_chunks = 0
-    failed_files: List[tuple[str, str]] = []
+    failed_files: list[tuple[str, str]] = []
 
     for file_path, error_msg in results:
         if error_msg is None:
             # Success - count chunks (placeholder logic)
-            path = Path(file_path)
-            text = path.read_text(encoding="utf-8")
-            total_chunks += len([text[i:i+config.chunk_size] for i in range(0, len(text), config.chunk_size - config.chunk_overlap)])
+            path = Path(file_path)  # noqa: ASYNC240
+            text = path.read_text(encoding="utf-8")  # noqa: ASYNC240
+            total_chunks += len(
+                [
+                    text[i : i + config.chunk_size]
+                    for i in range(0, len(text), config.chunk_size - config.chunk_overlap)
+                ]
+            )
         else:
             failed_files.append((file_path, error_msg))
             # Log failure

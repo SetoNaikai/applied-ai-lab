@@ -26,3 +26,5 @@ outputs/
 
 # Machine-specific: disables services when a local lab already provides them
 docker-compose.override.yml
+projects/p1-rag-corpus/ingest_failures/
+ingest_failures/
