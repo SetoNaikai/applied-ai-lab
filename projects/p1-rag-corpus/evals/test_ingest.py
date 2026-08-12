@@ -7,9 +7,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
-from ingest.models import IngestConfig, IngestResult
 from ingest.ingest import ingest_files
+from ingest.models import IngestConfig
 
 
 @pytest.mark.asyncio

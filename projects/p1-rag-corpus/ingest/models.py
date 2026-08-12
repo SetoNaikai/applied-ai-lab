@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +18,7 @@ class DocumentSource(BaseModel):
 class IngestConfig(BaseModel):
     """Configuration for the ingestion pipeline."""
 
-    source_paths: List[str] = Field(
+    source_paths: list[str] = Field(
         ...,
         description="List of source file paths to ingest (glob patterns OK)",
     )
@@ -34,7 +32,7 @@ class IngestResult(BaseModel):
 
     total_files: int = Field(..., description="Total number of files processed")
     total_chunks: int = Field(..., description="Total number of chunks created")
-    failed_files: List[tuple[str, str]] = Field(
+    failed_files: list[tuple[str, str]] = Field(
         default_factory=list,
         description="List of (file_path, error_message) for failures",
     )
@@ -45,4 +43,7 @@ class IngestFailure(BaseModel):
 
     file_path: str = Field(..., description="Absolute path to the failed file")
     error_message: str = Field(..., description="Human-readable error message")
-    timestamp: datetime = Field(default_factory=datetime.now, description="When the failure occurred")
+    timestamp: datetime = Field(
+        default_factory=datetime.now,
+        description="When the failure occurred",
+    )
